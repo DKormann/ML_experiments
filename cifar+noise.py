@@ -80,15 +80,21 @@ for noisy in range(2):
         pred = out.argmax(1)
         acc = (pred == test_targets).float().mean()
         loss = F.cross_entropy(out, test_targets)
-      test_loss.append(loss.item())
-    runs.append(test_loss)
+      test_loss.append((loss.item(),acc.item()))
+    runs.append((test_loss))
   results.append(runs)
 
 #%%
 for i, result in enumerate(results):
-  for run in result:
-    plt.plot(run, c='r' if i == 0 else 'b')
+  for run in result: plt.plot([r[0] for r in run], c='r' if i == 0 else 'b')
 plt.xlabel('Epoch')
 plt.ylabel('Test Loss')
+plt.legend(['No Noise']*4+['With Noise']*4)
+plt.show()
+
+for i, result in enumerate(results):
+  for run in result: plt.plot([r[1] for r in run], c='r' if i == 0 else 'b')
+plt.xlabel('Epoch')
+plt.ylabel('Test Accuracy')
 plt.legend(['No Noise']*4+['With Noise']*4)
 plt.show()
