@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 # download cifar10 dataset
 from torchvision.datasets import CIFAR10
 
-ds = CIFAR10(root='.')
+ds = CIFAR10(root='./datasets',download=True)
 
 #%%
 
@@ -19,8 +19,6 @@ train_data, test_data = noisy_data.split([40000, 10000])
 targets = torch.tensor(ds.targets)
 train_targets, test_targets = targets.split([40000, 10000])
 # %%
-
-#%%
 
 class CNN(nn.Module):
   def __init__(self):
@@ -74,3 +72,6 @@ for epoch in range(epochs):
     loss = F.cross_entropy(out, test_targets)
     print(f' epoch {epoch} loss: {loss.item():.5} acc: {acc.item():.5}')
 # %%
+channel_weights = net.conv1.weight.square().mean([0,2,3])
+
+plt.bar([0,1,2,3],channel_weights.cpu().detach().numpy())
