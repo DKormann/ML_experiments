@@ -16,10 +16,21 @@ data = torch.tensor(ds.data).float() / 255.
 noise = torch.rand(*data.shape[:-1],1)
 add_noise = True
 if add_noise: data = torch.cat([data, noise], dim=-1)
+
+
+edges = data @ torch.tensor( [0.299, 0.587, 0.114, 0])
+sobel = torch.tensor([[[1, 0, -1], [2, 0, -2], [1, 0, -1]],[[1, 2, 1], [0, 0, 0], [-1, -2, -1.]]]).unsqueeze(1)
+edge = F.conv2d(edges.unsqueeze(1), sobel).square().sum(1).sqrt()
+edge = F.pad(edge, (1,1,1,1), mode='constant', value=0)
+
+print(edge.shape, data.shape)
+data [:,:,:,3] = edge
+
 train_data, test_data = data.split([40000, 10000])
 targets = torch.tensor(ds.targets)
 train_targets, test_targets = targets.split([40000, 10000])
 # %%
+
 
 class CNN(nn.Module):
   def __init__(self, channels=3):
@@ -34,6 +45,11 @@ class CNN(nn.Module):
     self.fc1 = nn.Linear(256 * 4 * 4, 512)
     self.fc2 = nn.Linear(512, 10)
     self.dropout = nn.Dropout(0.5)
+    for m in self.parameters():
+      if len(m.shape) > 1:
+        nn.init.xavier_uniform_(m)
+      else : nn.init.zeros_(m)
+
   
   def forward(self, x):
     x = x.permute(0,3,1,2)
@@ -46,6 +62,9 @@ class CNN(nn.Module):
     return x
 
 net = CNN(4)
+
+print(net.conv1.weight.square().mean().sqrt().item())
+
 assert net(train_data[:5]).shape == torch.Size([5,10])
 opt = torch.optim.Adam(net.parameters(), lr=1e-3)
 
@@ -57,10 +76,9 @@ batch_size = 32
 
 results = []
 
-for noisy in range(2):
-
+for noisy in range(1):
   runs = []
-  for r in range(4):
+  for r in range(2):
     net = CNN(channels=3 if noisy == 0 else 4)
     opt = torch.optim.Adam(net.parameters(), lr=1e-3)
     test_loss = []
@@ -89,12 +107,12 @@ for i, result in enumerate(results):
   for run in result: plt.plot([r[0] for r in run], c='r' if i == 0 else 'b')
 plt.xlabel('Epoch')
 plt.ylabel('Test Loss')
-plt.legend(['No Noise']*4+['With Noise']*4)
+plt.legend(['pure']*4+['With edges']*4)
 plt.show()
 
 for i, result in enumerate(results):
   for run in result: plt.plot([r[1] for r in run], c='r' if i == 0 else 'b')
 plt.xlabel('Epoch')
 plt.ylabel('Test Accuracy')
-plt.legend(['No Noise']*4+['With Noise']*4)
+plt.legend(['pure']*4+['With edges']*4)
 plt.show()
